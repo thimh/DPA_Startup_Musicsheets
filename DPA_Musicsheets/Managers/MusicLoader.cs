@@ -48,32 +48,47 @@ namespace DPA_Musicsheets.Managers
         /// <param name="fileName"></param>
         public void OpenFile(string fileName)
         {
+            CheckFileExtension(fileName);
+
+            LoadLilypondIntoWpfStaffsAndMidi(LilypondText);
+        }
+
+        private void CheckFileExtension(string fileName)
+        {
             if (Path.GetExtension(fileName).EndsWith(".mid"))
             {
-                MidiSequence = new Sequence();
-                MidiSequence.Load(fileName);
-
-                MidiPlayerViewModel.MidiSequence = MidiSequence;
-                this.LilypondText = LoadMidiIntoLilypond(MidiSequence);
-                this.LilypondViewModel.LilypondTextLoaded(this.LilypondText);
+                ReadMidiFile(fileName);
             }
             else if (Path.GetExtension(fileName).EndsWith(".ly"))
             {
-                StringBuilder sb = new StringBuilder();
-                foreach (var line in File.ReadAllLines(fileName))
-                {
-                    sb.AppendLine(line);
-                }
-                
-                this.LilypondText = sb.ToString();
-                this.LilypondViewModel.LilypondTextLoaded(this.LilypondText);
+                ReadLilypondFile(fileName);
             }
             else
             {
                 throw new NotSupportedException($"File extension {Path.GetExtension(fileName)} is not supported.");
             }
+        }
 
-            LoadLilypondIntoWpfStaffsAndMidi(LilypondText);
+        private void ReadLilypondFile(string fileName)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (var line in File.ReadAllLines(fileName))
+            {
+                sb.AppendLine(line);
+            }
+
+            this.LilypondText = sb.ToString();
+            this.LilypondViewModel.LilypondTextLoaded(this.LilypondText);
+        }
+
+        private void ReadMidiFile(string fileName)
+        {
+            MidiSequence = new Sequence();
+            MidiSequence.Load(fileName);
+
+            MidiPlayerViewModel.MidiSequence = MidiSequence;
+            this.LilypondText = LoadMidiIntoLilypond(MidiSequence);
+            this.LilypondViewModel.LilypondTextLoaded(this.LilypondText);
         }
 
         /// <summary>
