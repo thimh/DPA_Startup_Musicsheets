@@ -130,6 +130,15 @@ namespace DPA_Musicsheets.Managers
             double percentageOfBarReached = 0;
             bool startedNoteIsClosed = true;
 
+            BuildTrackFromMidi(sequence, lilypondContent, division, ref previousMidiKey, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, ref startedNoteIsClosed);
+
+            lilypondContent.Append("}");
+
+            return lilypondContent.ToString();
+        }
+
+        private void BuildTrackFromMidi(Sequence sequence, StringBuilder lilypondContent, int division, ref int previousMidiKey, ref int previousNoteAbsoluteTicks, ref double percentageOfBarReached, ref bool startedNoteIsClosed)
+        {
             for (int i = 0; i < sequence.Count(); i++)
             {
                 Track track = sequence[i];
@@ -181,11 +190,11 @@ namespace DPA_Musicsheets.Managers
                             var channelMessage = midiEvent.MidiMessage as ChannelMessage;
                             if (channelMessage.Command == ChannelCommand.NoteOn)
                             {
-                                if(channelMessage.Data2 > 0) // Data2 = loudness
+                                if (channelMessage.Data2 > 0) // Data2 = loudness
                                 {
                                     // Append the new note.
                                     lilypondContent.Append(MidiToLilyHelper.GetLilyNoteName(previousMidiKey, channelMessage.Data1));
-                                    
+
                                     previousMidiKey = channelMessage.Data1;
                                     startedNoteIsClosed = false;
                                 }
@@ -214,10 +223,6 @@ namespace DPA_Musicsheets.Managers
                     }
                 }
             }
-
-            lilypondContent.Append("}");
-
-            return lilypondContent.ToString();
         }
 
         #endregion Midiloading (loads midi to lilypond)
@@ -347,7 +352,7 @@ namespace DPA_Musicsheets.Managers
                     case LilypondTokenKind.Time:
                         currentToken = currentToken.NextToken;
                         var times = currentToken.Value.Split('/');
-                        symbols.Add(new TimeSignature(TimeSignatureType.Numbers, UInt32.Parse(times[0]), UInt32.Parse(times[1])));
+                        symbols.Add(new PSAMControlLibrary.TimeSignature(TimeSignatureType.Numbers, uint.Parse(times[0]), uint.Parse(times[1])));
                         break;
                     case LilypondTokenKind.Tempo:
                         // Tempo not supported

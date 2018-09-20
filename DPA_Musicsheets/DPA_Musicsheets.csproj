@@ -107,7 +107,13 @@
     <Compile Include="Managers\MusicLoader.cs" />
     <Compile Include="Models\LilypondToken.cs" />
     <Compile Include="Models\LilypondTokenKind.cs" />
+    <Compile Include="Models\MyBar.cs" />
+    <Compile Include="Models\MyLength.cs" />
     <Compile Include="Models\MyNote.cs" />
+    <Compile Include="Models\MyRest.cs" />
+    <Compile Include="Models\TimeSignature.cs" />
+    <Compile Include="Models\MyTone.cs" />
+    <Compile Include="Models\MyTrack.cs" />
     <Compile Include="ViewModels\MidiPlayerViewModel.cs" />
     <Compile Include="ViewModels\StaffsViewModel.cs" />
     <Compile Include="Views\MidiPlayerCtrl.xaml.cs">

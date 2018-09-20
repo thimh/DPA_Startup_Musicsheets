@@ -8,13 +8,13 @@ namespace DPA_Musicsheets.Models
 {
     class MyNote
     {
-        private int length;
+        private MyLength length;
         private char tone;
         private bool hasDot;
         private bool hasSharp;
         private bool hasFlat;
 
-        public MyNote(int length, char tone, bool hasDot = false, bool hasSharp = false, bool hasFlat = false)
+        public MyNote(MyLength length, char tone, bool hasDot = false, bool hasSharp = false, bool hasFlat = false)
         {
             this.length = length;
             this.tone = tone;
