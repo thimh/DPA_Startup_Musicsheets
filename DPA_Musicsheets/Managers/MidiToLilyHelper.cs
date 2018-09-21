@@ -11,7 +11,13 @@ namespace DPA_Musicsheets.Managers
     /// </summary>
     public static class MidiToLilyHelper
     {
-        public static string GetLilypondNoteLength(int absoluteTicks, int nextNoteAbsoluteTicks, int division, int beatNote, int beatsPerBar, out double percentageOfBar)
+        public static string GetLilypondNoteLength(
+            int absoluteTicks,
+            int nextNoteAbsoluteTicks,
+            int division,
+            int beatNote,
+            int beatsPerBar,
+            out double percentageOfBar)
         {
             int duration = 0;
             int dots = 0;
@@ -62,23 +68,28 @@ namespace DPA_Musicsheets.Managers
 
                     double currentTime = 0;
 
-                    while (currentTime < (noteLength - subtractDuration))
-                    {
-                        var addtime = 1 / ((subtractDuration / beatNote) * Math.Pow(2, dots));
-                        if (addtime <= 0) break;
-                        currentTime += addtime;
-                        if (currentTime <= (noteLength - subtractDuration))
-                        {
-                            dots++;
-                        }
-                        if (dots >= 4) break;
-                    }
+                    AddDots(beatNote, ref dots, noteLength, subtractDuration, ref currentTime);
 
                     break;
                 }
             }
 
             return duration + new String('.', dots);
+        }
+
+        private static void AddDots(int beatNote, ref int dots, int noteLength, int subtractDuration, ref double currentTime)
+        {
+            while (currentTime < (noteLength - subtractDuration))
+            {
+                var addtime = 1 / ((subtractDuration / beatNote) * Math.Pow(2, dots));
+                if (addtime <= 0) break;
+                currentTime += addtime;
+                if (currentTime <= (noteLength - subtractDuration))
+                {
+                    dots++;
+                }
+                if (dots >= 4) break;
+            }
         }
 
         public static string GetLilyNoteName(int previousMidiKey, int midiKey)
@@ -126,19 +137,30 @@ namespace DPA_Musicsheets.Managers
             }
 
             int distance = midiKey - previousMidiKey;
-            while (distance < -6)
-            {
-                name += ",";
-                distance += 8;
-            }
 
+            SetOctaveHigher(ref name, ref distance);
+
+            SetOctaveLower(ref name, ref distance);
+
+            return name;
+        }
+
+        private static void SetOctaveLower(ref string name, ref int distance)
+        {
             while (distance > 6)
             {
                 name += "'";
                 distance -= 8;
             }
+        }
 
-            return name;
+        private static void SetOctaveHigher(ref string name, ref int distance)
+        {
+            while (distance < -6)
+            {
+                name += ",";
+                distance += 8;
+            }
         }
     }
 }

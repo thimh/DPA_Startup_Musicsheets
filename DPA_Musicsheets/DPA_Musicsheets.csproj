@@ -111,7 +111,7 @@
     <Compile Include="Models\MyLength.cs" />
     <Compile Include="Models\MyNote.cs" />
     <Compile Include="Models\MyRest.cs" />
-    <Compile Include="Models\TimeSignature.cs" />
+    <Compile Include="Models\MyTimeSignature.cs" />
     <Compile Include="Models\MyTone.cs" />
     <Compile Include="Models\MyTrack.cs" />
     <Compile Include="ViewModels\MidiPlayerViewModel.cs" />

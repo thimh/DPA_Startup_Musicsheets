@@ -130,14 +130,26 @@ namespace DPA_Musicsheets.Managers
             double percentageOfBarReached = 0;
             bool startedNoteIsClosed = true;
 
-            BuildTrackFromMidi(sequence, lilypondContent, division, ref previousMidiKey, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, ref startedNoteIsClosed);
+            BuildTrackFromMidi(sequence,
+                ref lilypondContent,
+                division,
+                ref previousMidiKey,
+                ref previousNoteAbsoluteTicks,
+                ref percentageOfBarReached,
+                ref startedNoteIsClosed);
 
             lilypondContent.Append("}");
 
             return lilypondContent.ToString();
         }
 
-        private void BuildTrackFromMidi(Sequence sequence, StringBuilder lilypondContent, int division, ref int previousMidiKey, ref int previousNoteAbsoluteTicks, ref double percentageOfBarReached, ref bool startedNoteIsClosed)
+        private void BuildTrackFromMidi(Sequence sequence,
+            ref StringBuilder lilypondContent,
+            int division,
+            ref int previousMidiKey,
+            ref int previousNoteAbsoluteTicks,
+            ref double percentageOfBarReached,
+            ref bool startedNoteIsClosed)
         {
             for (int i = 0; i < sequence.Count(); i++)
             {
@@ -156,73 +168,111 @@ namespace DPA_Musicsheets.Managers
                             switch (metaMessage.MetaType)
                             {
                                 case MetaType.TimeSignature:
-                                    byte[] timeSignatureBytes = metaMessage.GetBytes();
-                                    _beatNote = timeSignatureBytes[0];
-                                    _beatsPerBar = (int)(1 / Math.Pow(timeSignatureBytes[1], -2));
-                                    lilypondContent.AppendLine($"\\time {_beatNote}/{_beatsPerBar}");
+                                    SetTimeSignature(metaMessage, ref lilypondContent);
                                     break;
                                 case MetaType.Tempo:
-                                    byte[] tempoBytes = metaMessage.GetBytes();
-                                    int tempo = (tempoBytes[0] & 0xff) << 16 | (tempoBytes[1] & 0xff) << 8 | (tempoBytes[2] & 0xff);
-                                    _bpm = 60000000 / tempo;
-                                    lilypondContent.AppendLine($"\\tempo 4={_bpm}");
+                                    SetTempo(metaMessage, ref lilypondContent);
                                     break;
                                 case MetaType.EndOfTrack:
-                                    if (previousNoteAbsoluteTicks > 0)
-                                    {
-                                        // Finish the last notelength.
-                                        double percentageOfBar;
-                                        lilypondContent.Append(MidiToLilyHelper.GetLilypondNoteLength(previousNoteAbsoluteTicks, midiEvent.AbsoluteTicks, division, _beatNote, _beatsPerBar, out percentageOfBar));
-                                        lilypondContent.Append(" ");
-
-                                        percentageOfBarReached += percentageOfBar;
-                                        if (percentageOfBarReached >= 1)
-                                        {
-                                            lilypondContent.AppendLine("|");
-                                            percentageOfBar = percentageOfBar - 1;
-                                        }
-                                    }
+                                    percentageOfBarReached = SetEndOfTrack(division, previousNoteAbsoluteTicks, percentageOfBarReached, midiEvent, ref lilypondContent);
                                     break;
                                 default: break;
                             }
                             break;
                         case MessageType.Channel:
-                            var channelMessage = midiEvent.MidiMessage as ChannelMessage;
-                            if (channelMessage.Command == ChannelCommand.NoteOn)
-                            {
-                                if (channelMessage.Data2 > 0) // Data2 = loudness
-                                {
-                                    // Append the new note.
-                                    lilypondContent.Append(MidiToLilyHelper.GetLilyNoteName(previousMidiKey, channelMessage.Data1));
-
-                                    previousMidiKey = channelMessage.Data1;
-                                    startedNoteIsClosed = false;
-                                }
-                                else if (!startedNoteIsClosed)
-                                {
-                                    // Finish the previous note with the length.
-                                    double percentageOfBar;
-                                    lilypondContent.Append(MidiToLilyHelper.GetLilypondNoteLength(previousNoteAbsoluteTicks, midiEvent.AbsoluteTicks, division, _beatNote, _beatsPerBar, out percentageOfBar));
-                                    previousNoteAbsoluteTicks = midiEvent.AbsoluteTicks;
-                                    lilypondContent.Append(" ");
-
-                                    percentageOfBarReached += percentageOfBar;
-                                    if (percentageOfBarReached >= 1)
-                                    {
-                                        lilypondContent.AppendLine("|");
-                                        percentageOfBarReached -= 1;
-                                    }
-                                    startedNoteIsClosed = true;
-                                }
-                                else
-                                {
-                                    lilypondContent.Append("r");
-                                }
-                            }
+                            SetChannel(ref lilypondContent, division, ref previousMidiKey, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, ref startedNoteIsClosed, midiEvent);
                             break;
                     }
                 }
             }
+        }
+
+        private void SetChannel(ref StringBuilder lilypondContent, int division, ref int previousMidiKey, ref int previousNoteAbsoluteTicks, ref double percentageOfBarReached, ref bool startedNoteIsClosed, MidiEvent midiEvent)
+        {
+            var channelMessage = midiEvent.MidiMessage as ChannelMessage;
+            if (channelMessage.Command == ChannelCommand.NoteOn)
+            {
+                if (channelMessage.Data2 > 0) // Data2 = loudness
+                {
+                    // Append the new note.
+                    startedNoteIsClosed = false;
+                    AppendNoteTone(ref lilypondContent, ref previousMidiKey, channelMessage);
+                }
+                else if (!startedNoteIsClosed)
+                {
+                    double percentageOfBar;
+                    // Finish the previous note with the length.
+                    startedNoteIsClosed = true;
+                    AppendNoteLength(ref lilypondContent, division, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, midiEvent, out percentageOfBar);
+                    percentageOfBarReached = AppendBarLine(lilypondContent, percentageOfBarReached, percentageOfBar);
+                }
+                else
+                {
+                    lilypondContent.Append("r");
+                }
+            }
+        }
+
+        private static double AppendBarLine(StringBuilder lilypondContent, double percentageOfBarReached, double percentageOfBar)
+        {
+            percentageOfBarReached += percentageOfBar;
+            if (percentageOfBarReached >= 1)
+            {
+                lilypondContent.AppendLine("|");
+                percentageOfBarReached -= 1;
+            }
+
+            return percentageOfBarReached;
+        }
+
+        private void AppendNoteLength(ref StringBuilder lilypondContent, int division, ref int previousNoteAbsoluteTicks, ref double percentageOfBarReached, MidiEvent midiEvent, out double percentageOfBar)
+        {
+            lilypondContent.Append(MidiToLilyHelper.GetLilypondNoteLength(previousNoteAbsoluteTicks, midiEvent.AbsoluteTicks, division, _beatNote, _beatsPerBar, out percentageOfBar));
+            previousNoteAbsoluteTicks = midiEvent.AbsoluteTicks;
+            lilypondContent.Append(" ");
+        }
+
+        private static void AppendNoteTone(ref StringBuilder lilypondContent, ref int previousMidiKey, ChannelMessage channelMessage)
+        {
+            lilypondContent.Append(MidiToLilyHelper.GetLilyNoteName(previousMidiKey, channelMessage.Data1));
+
+            previousMidiKey = channelMessage.Data1;
+        }
+
+        private double SetEndOfTrack(int division, int previousNoteAbsoluteTicks, double percentageOfBarReached, MidiEvent midiEvent, ref StringBuilder lilypondContent)
+        {
+            if (previousNoteAbsoluteTicks > 0)
+            {
+                // Finish the last notelength.
+                double percentageOfBar;
+                lilypondContent.Append(MidiToLilyHelper.GetLilypondNoteLength(previousNoteAbsoluteTicks, midiEvent.AbsoluteTicks, division, _beatNote, _beatsPerBar, out percentageOfBar));
+                lilypondContent.Append(" ");
+
+                percentageOfBarReached += percentageOfBar;
+                if (percentageOfBarReached >= 1)
+                {
+                    lilypondContent.AppendLine("|");
+                    percentageOfBar = percentageOfBar - 1;
+                }
+            }
+
+            return percentageOfBarReached;
+        }
+
+        private void SetTempo(MetaMessage metaMessage, ref StringBuilder lilypondContent)
+        {
+            byte[] tempoBytes = metaMessage.GetBytes();
+            int tempo = (tempoBytes[0] & 0xff) << 16 | (tempoBytes[1] & 0xff) << 8 | (tempoBytes[2] & 0xff);
+            _bpm = 60000000 / tempo;
+            lilypondContent.AppendLine($"\\tempo 4={_bpm}");
+        }
+
+        private void SetTimeSignature(MetaMessage metaMessage, ref StringBuilder lilypondContent)
+        {
+            byte[] timeSignatureBytes = metaMessage.GetBytes();
+            _beatNote = timeSignatureBytes[0];
+            _beatsPerBar = (int)(1 / Math.Pow(timeSignatureBytes[1], -2));
+            lilypondContent.AppendLine($"\\time {_beatNote}/{_beatsPerBar}");
         }
 
         #endregion Midiloading (loads midi to lilypond)
@@ -377,28 +427,8 @@ namespace DPA_Musicsheets.Managers
                     Value = s
                 };
 
-                switch (s)
-                {
-                    case "\\relative": token.TokenKind = LilypondTokenKind.Staff; break;
-                    case "\\clef": token.TokenKind = LilypondTokenKind.Clef; break;
-                    case "\\time": token.TokenKind = LilypondTokenKind.Time; break;
-                    case "\\tempo": token.TokenKind = LilypondTokenKind.Tempo; break;
-                    case "\\repeat": token.TokenKind = LilypondTokenKind.Repeat; break;
-                    case "\\alternative": token.TokenKind = LilypondTokenKind.Alternative; break;
-                    case "{": token.TokenKind = LilypondTokenKind.SectionStart; break;
-                    case "}": token.TokenKind = LilypondTokenKind.SectionEnd; break;
-                    case "|": token.TokenKind = LilypondTokenKind.Bar; break;
-                    default: token.TokenKind = LilypondTokenKind.Unknown; break;
-                }
-
-                if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"[~]?[a-g][,'eis]*[0-9]+[.]*").IsMatch(s))
-                {
-                    token.TokenKind = LilypondTokenKind.Note;
-                }
-                else if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"r.*?[0-9][.]*").IsMatch(s))
-                {
-                    token.TokenKind = LilypondTokenKind.Rest;
-                }
+                token = CheckTokenKind(s, token);
+                token = CheckTokenKindIsNote(s, token);
 
                 if (tokens.Last != null)
                 {
@@ -410,6 +440,38 @@ namespace DPA_Musicsheets.Managers
             }
 
             return tokens;
+        }
+
+        private static LilypondToken CheckTokenKindIsNote(string s, LilypondToken token)
+        {
+            if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"[~]?[a-g][,'eis]*[0-9]+[.]*").IsMatch(s))
+            {
+                token.TokenKind = LilypondTokenKind.Note;
+            }
+            else if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"r.*?[0-9][.]*").IsMatch(s))
+            {
+                token.TokenKind = LilypondTokenKind.Rest;
+            }
+
+            return token;
+        }
+
+        private static LilypondToken CheckTokenKind(string s, LilypondToken token)
+        {
+            switch (s)
+            {
+                case "\\relative": token.TokenKind = LilypondTokenKind.Staff; break;
+                case "\\clef": token.TokenKind = LilypondTokenKind.Clef; break;
+                case "\\time": token.TokenKind = LilypondTokenKind.Time; break;
+                case "\\tempo": token.TokenKind = LilypondTokenKind.Tempo; break;
+                case "\\repeat": token.TokenKind = LilypondTokenKind.Repeat; break;
+                case "\\alternative": token.TokenKind = LilypondTokenKind.Alternative; break;
+                case "{": token.TokenKind = LilypondTokenKind.SectionStart; break;
+                case "}": token.TokenKind = LilypondTokenKind.SectionEnd; break;
+                case "|": token.TokenKind = LilypondTokenKind.Bar; break;
+                default: token.TokenKind = LilypondTokenKind.Unknown; break;
+            }
+            return token;
         }
         #endregion Staffs loading (loads lilypond to WPF staffs)
 
@@ -438,12 +500,7 @@ namespace DPA_Musicsheets.Managers
             sequence.Add(metaTrack);
 
             // Calculate tempo
-            int speed = (60000000 / _bpm);
-            byte[] tempo = new byte[3];
-            tempo[0] = (byte)((speed >> 16) & 0xff);
-            tempo[1] = (byte)((speed >> 8) & 0xff);
-            tempo[2] = (byte)(speed & 0xff);
-            metaTrack.Insert(0 /* Insert at 0 ticks*/, new MetaMessage(MetaType.Tempo, tempo));
+            CalculateTempo(ref metaTrack);
 
             Track notesTrack = new Track();
             sequence.Add(notesTrack);
@@ -454,30 +511,10 @@ namespace DPA_Musicsheets.Managers
                 switch (musicalSymbol.Type)
                 {
                     case MusicalSymbolType.Note:
-                        Note note = musicalSymbol as Note;
-
-                        // Calculate duration
-                        double absoluteLength = 1.0 / (double)note.Duration;
-                        absoluteLength += (absoluteLength / 2.0) * note.NumberOfDots;
-
-                        double relationToQuartNote = _beatNote / 4.0;
-                        double percentageOfBeatNote = (1.0 / _beatNote) / absoluteLength;
-                        double deltaTicks = (sequence.Division / relationToQuartNote) / percentageOfBeatNote;
-
-                        // Calculate height
-                        int noteHeight = notesOrderWithCrosses.IndexOf(note.Step.ToLower()) + ((note.Octave + 1) * 12);
-                        noteHeight += note.Alter;
-                        notesTrack.Insert(absoluteTicks, new ChannelMessage(ChannelCommand.NoteOn, 1, noteHeight, 90)); // Data2 = volume
-
-                        absoluteTicks += (int)deltaTicks;
-                        notesTrack.Insert(absoluteTicks, new ChannelMessage(ChannelCommand.NoteOn, 1, noteHeight, 0)); // Data2 = volume
-
+                        absoluteTicks = CreateMidiNote(notesOrderWithCrosses, absoluteTicks, sequence, ref notesTrack, musicalSymbol);
                         break;
                     case MusicalSymbolType.TimeSignature:
-                        byte[] timeSignature = new byte[4];
-                        timeSignature[0] = (byte)_beatsPerBar;
-                        timeSignature[1] = (byte)(Math.Log(_beatNote) / Math.Log(2));
-                        metaTrack.Insert(absoluteTicks, new MetaMessage(MetaType.TimeSignature, timeSignature));
+                        CreateMidiTimeSignature(absoluteTicks, ref metaTrack);
                         break;
                     default:
                         break;
@@ -487,6 +524,46 @@ namespace DPA_Musicsheets.Managers
             notesTrack.Insert(absoluteTicks, MetaMessage.EndOfTrackMessage);
             metaTrack.Insert(absoluteTicks, MetaMessage.EndOfTrackMessage);
             return sequence;
+        }
+
+        private void CalculateTempo(ref Track metaTrack)
+        {
+            int speed = (60000000 / _bpm);
+            byte[] tempo = new byte[3];
+            tempo[0] = (byte)((speed >> 16) & 0xff);
+            tempo[1] = (byte)((speed >> 8) & 0xff);
+            tempo[2] = (byte)(speed & 0xff);
+            metaTrack.Insert(0 /* Insert at 0 ticks*/, new MetaMessage(MetaType.Tempo, tempo));
+        }
+
+        private void CreateMidiTimeSignature(int absoluteTicks, ref Track metaTrack)
+        {
+            byte[] timeSignature = new byte[4];
+            timeSignature[0] = (byte)_beatsPerBar;
+            timeSignature[1] = (byte)(Math.Log(_beatNote) / Math.Log(2));
+            metaTrack.Insert(absoluteTicks, new MetaMessage(MetaType.TimeSignature, timeSignature));
+        }
+
+        private int CreateMidiNote(List<string> notesOrderWithCrosses, int absoluteTicks, Sequence sequence, ref Track notesTrack, MusicalSymbol musicalSymbol)
+        {
+            Note note = musicalSymbol as Note;
+
+            // Calculate duration
+            double absoluteLength = 1.0 / (double)note.Duration;
+            absoluteLength += (absoluteLength / 2.0) * note.NumberOfDots;
+
+            double relationToQuartNote = _beatNote / 4.0;
+            double percentageOfBeatNote = (1.0 / _beatNote) / absoluteLength;
+            double deltaTicks = (sequence.Division / relationToQuartNote) / percentageOfBeatNote;
+
+            // Calculate height
+            int noteHeight = notesOrderWithCrosses.IndexOf(note.Step.ToLower()) + ((note.Octave + 1) * 12);
+            noteHeight += note.Alter;
+            notesTrack.Insert(absoluteTicks, new ChannelMessage(ChannelCommand.NoteOn, 1, noteHeight, 90)); // Data2 = volume
+
+            absoluteTicks += (int)deltaTicks;
+            notesTrack.Insert(absoluteTicks, new ChannelMessage(ChannelCommand.NoteOn, 1, noteHeight, 0)); // Data2 = volume
+            return absoluteTicks;
         }
 
         internal void SaveToPDF(string fileName)
@@ -513,9 +590,9 @@ namespace DPA_Musicsheets.Managers
             };
 
             process.Start();
-            while (!process.HasExited) { /* Wait for exit */
-                }
-                if (sourceFolder != targetFolder || sourceFileName != targetFileName)
+            while (!process.HasExited) { /* Wait for exit */ }
+
+            if (sourceFolder != targetFolder || sourceFileName != targetFileName)
             {
                 File.Move(sourceFolder + "\\" + sourceFileName + ".pdf", targetFolder + "\\" + targetFileName + ".pdf");
                 File.Delete(tmpFileName);
