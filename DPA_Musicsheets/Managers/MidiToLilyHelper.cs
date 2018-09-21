@@ -9,6 +9,7 @@ namespace DPA_Musicsheets.Managers
     /// <summary>
     /// TODO: Static classes with static helper methods are not done. Can a better domain class help with this?
     /// </summary>
+    //TODO: Implement Domain Classes!!!
     public static class MidiToLilyHelper
     {
         public static string GetLilypondNoteLength(

@@ -53,6 +53,7 @@ namespace DPA_Musicsheets.Managers
             LoadLilypondIntoWpfStaffsAndMidi(LilypondText);
         }
 
+        //TODO: Factory Method!!!
         private void CheckFileExtension(string fileName)
         {
             if (Path.GetExtension(fileName).EndsWith(".mid"))
@@ -97,6 +98,7 @@ namespace DPA_Musicsheets.Managers
         /// TODO: Create our own domain classes to be independent of external libraries/languages.
         /// </summary>
         /// <param name="content"></param>
+        //TODO: Use Converters!!!
         public void LoadLilypondIntoWpfStaffsAndMidi(string content)
         {
             LilypondText = content;
@@ -118,6 +120,7 @@ namespace DPA_Musicsheets.Managers
         /// </summary>
         /// <param name="sequence"></param>
         /// <returns></returns>
+        //TODO: Implement own Domain Classes!!!
         public string LoadMidiIntoLilypond(Sequence sequence)
         {
             StringBuilder lilypondContent = new StringBuilder();
@@ -131,7 +134,7 @@ namespace DPA_Musicsheets.Managers
             bool startedNoteIsClosed = true;
 
             BuildTrackFromMidi(sequence,
-                ref lilypondContent,
+                lilypondContent,
                 division,
                 ref previousMidiKey,
                 ref previousNoteAbsoluteTicks,
@@ -144,7 +147,7 @@ namespace DPA_Musicsheets.Managers
         }
 
         private void BuildTrackFromMidi(Sequence sequence,
-            ref StringBuilder lilypondContent,
+            StringBuilder lilypondContent,
             int division,
             ref int previousMidiKey,
             ref int previousNoteAbsoluteTicks,
@@ -161,6 +164,8 @@ namespace DPA_Musicsheets.Managers
                     // TODO: Split this switch statements and create separate logic.
                     // We want to split this so that we can expand our functionality later with new keywords for example.
                     // Hint: Command pattern? Strategies? Factory method?
+                    //TODO: Command Pattern!!!
+                    //TODO: In midiconverter
                     switch (midiMessage.MessageType)
                     {
                         case MessageType.Meta:
@@ -168,26 +173,32 @@ namespace DPA_Musicsheets.Managers
                             switch (metaMessage.MetaType)
                             {
                                 case MetaType.TimeSignature:
-                                    SetTimeSignature(metaMessage, ref lilypondContent);
+                                    SetTimeSignature(metaMessage, lilypondContent);
                                     break;
                                 case MetaType.Tempo:
-                                    SetTempo(metaMessage, ref lilypondContent);
+                                    SetTempo(metaMessage, lilypondContent);
                                     break;
                                 case MetaType.EndOfTrack:
-                                    percentageOfBarReached = SetEndOfTrack(division, previousNoteAbsoluteTicks, percentageOfBarReached, midiEvent, ref lilypondContent);
+                                    percentageOfBarReached = SetEndOfTrack(division, previousNoteAbsoluteTicks, percentageOfBarReached, midiEvent, lilypondContent);
                                     break;
                                 default: break;
                             }
                             break;
                         case MessageType.Channel:
-                            SetChannel(ref lilypondContent, division, ref previousMidiKey, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, ref startedNoteIsClosed, midiEvent);
+                            SetChannel(lilypondContent, division, ref previousMidiKey, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, ref startedNoteIsClosed, midiEvent);
                             break;
                     }
                 }
             }
         }
 
-        private void SetChannel(ref StringBuilder lilypondContent, int division, ref int previousMidiKey, ref int previousNoteAbsoluteTicks, ref double percentageOfBarReached, ref bool startedNoteIsClosed, MidiEvent midiEvent)
+        private void SetChannel(StringBuilder lilypondContent,
+            int division,
+            ref int previousMidiKey,
+            ref int previousNoteAbsoluteTicks,
+            ref double percentageOfBarReached,
+            ref bool startedNoteIsClosed,
+            MidiEvent midiEvent)
         {
             var channelMessage = midiEvent.MidiMessage as ChannelMessage;
             if (channelMessage.Command == ChannelCommand.NoteOn)
@@ -196,14 +207,14 @@ namespace DPA_Musicsheets.Managers
                 {
                     // Append the new note.
                     startedNoteIsClosed = false;
-                    AppendNoteTone(ref lilypondContent, ref previousMidiKey, channelMessage);
+                    AppendNoteTone(lilypondContent, ref previousMidiKey, channelMessage);
                 }
                 else if (!startedNoteIsClosed)
                 {
                     double percentageOfBar;
                     // Finish the previous note with the length.
                     startedNoteIsClosed = true;
-                    AppendNoteLength(ref lilypondContent, division, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, midiEvent, out percentageOfBar);
+                    AppendNoteLength(lilypondContent, division, ref previousNoteAbsoluteTicks, ref percentageOfBarReached, midiEvent, out percentageOfBar);
                     percentageOfBarReached = AppendBarLine(lilypondContent, percentageOfBarReached, percentageOfBar);
                 }
                 else
@@ -225,21 +236,21 @@ namespace DPA_Musicsheets.Managers
             return percentageOfBarReached;
         }
 
-        private void AppendNoteLength(ref StringBuilder lilypondContent, int division, ref int previousNoteAbsoluteTicks, ref double percentageOfBarReached, MidiEvent midiEvent, out double percentageOfBar)
+        private void AppendNoteLength(StringBuilder lilypondContent, int division, ref int previousNoteAbsoluteTicks, ref double percentageOfBarReached, MidiEvent midiEvent, out double percentageOfBar)
         {
             lilypondContent.Append(MidiToLilyHelper.GetLilypondNoteLength(previousNoteAbsoluteTicks, midiEvent.AbsoluteTicks, division, _beatNote, _beatsPerBar, out percentageOfBar));
             previousNoteAbsoluteTicks = midiEvent.AbsoluteTicks;
             lilypondContent.Append(" ");
         }
 
-        private static void AppendNoteTone(ref StringBuilder lilypondContent, ref int previousMidiKey, ChannelMessage channelMessage)
+        private static void AppendNoteTone(StringBuilder lilypondContent, ref int previousMidiKey, ChannelMessage channelMessage)
         {
             lilypondContent.Append(MidiToLilyHelper.GetLilyNoteName(previousMidiKey, channelMessage.Data1));
 
             previousMidiKey = channelMessage.Data1;
         }
 
-        private double SetEndOfTrack(int division, int previousNoteAbsoluteTicks, double percentageOfBarReached, MidiEvent midiEvent, ref StringBuilder lilypondContent)
+        private double SetEndOfTrack(int division, int previousNoteAbsoluteTicks, double percentageOfBarReached, MidiEvent midiEvent, StringBuilder lilypondContent)
         {
             if (previousNoteAbsoluteTicks > 0)
             {
@@ -259,7 +270,7 @@ namespace DPA_Musicsheets.Managers
             return percentageOfBarReached;
         }
 
-        private void SetTempo(MetaMessage metaMessage, ref StringBuilder lilypondContent)
+        private void SetTempo(MetaMessage metaMessage, StringBuilder lilypondContent)
         {
             byte[] tempoBytes = metaMessage.GetBytes();
             int tempo = (tempoBytes[0] & 0xff) << 16 | (tempoBytes[1] & 0xff) << 8 | (tempoBytes[2] & 0xff);
@@ -267,7 +278,7 @@ namespace DPA_Musicsheets.Managers
             lilypondContent.AppendLine($"\\tempo 4={_bpm}");
         }
 
-        private void SetTimeSignature(MetaMessage metaMessage, ref StringBuilder lilypondContent)
+        private void SetTimeSignature(MetaMessage metaMessage, StringBuilder lilypondContent)
         {
             byte[] timeSignatureBytes = metaMessage.GetBytes();
             _beatNote = timeSignatureBytes[0];
@@ -292,9 +303,9 @@ namespace DPA_Musicsheets.Managers
             LilypondToken currentToken = tokens.First();
             while (currentToken != null)
             {
-                // TODO: There are a lot of switches based on LilypondTokenKind, can't those be eliminated en delegated?
+                // TODO: There are a lot of switches based on LilypondTokenKind, can't those be eliminated and delegated?
                 // HINT: Command, Decorator, Factory etc.
-
+                //TODO: Decorator Pattern!!!
                 // TODO: Repeats are somewhat weirdly done. Can we replace this with the COMPOSITE pattern?
                 switch (currentToken.TokenKind)
                 {
@@ -336,6 +347,7 @@ namespace DPA_Musicsheets.Managers
                     case LilypondTokenKind.Note:
                         // Tied
                         // TODO: A tie, like a dot and cross or mole are decorations on notes. Is the DECORATOR pattern of use here?
+                        //TODO: Decorator Pattern!!!
                         NoteTieType tie = NoteTieType.None;
                         if (currentToken.Value.StartsWith("~"))
                         {
@@ -376,7 +388,13 @@ namespace DPA_Musicsheets.Managers
 
                         previousNote = currentToken.Value[0];
 
-                        var note = new Note(currentToken.Value[0].ToString().ToUpper(), alter, previousOctave, (MusicalSymbolDuration)noteLength, NoteStemDirection.Up, tie, new List<NoteBeamType>() { NoteBeamType.Single });
+                        var note = new Note(currentToken.Value[0].ToString().ToUpper(),
+                            alter,
+                            previousOctave,
+                            (MusicalSymbolDuration)noteLength,
+                            NoteStemDirection.Up,
+                            tie,
+                            new List<NoteBeamType>() { NoteBeamType.Single });
                         note.NumberOfDots += currentToken.Value.Count(c => c.Equals('.'));
                         
                         symbols.Add(note);
@@ -458,6 +476,7 @@ namespace DPA_Musicsheets.Managers
 
         private static LilypondToken CheckTokenKind(string s, LilypondToken token)
         {
+            //TODO: Factory Pattern!!!???
             switch (s)
             {
                 case "\\relative": token.TokenKind = LilypondTokenKind.Staff; break;
@@ -508,6 +527,7 @@ namespace DPA_Musicsheets.Managers
             for (int i = 0; i < WPFStaffs.Count; i++)
             {
                 var musicalSymbol = WPFStaffs[i];
+                //TODO: Command Pattern!!!
                 switch (musicalSymbol.Type)
                 {
                     case MusicalSymbolType.Note:

@@ -103,8 +103,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Managers\Converter.cs" />
+    <Compile Include="Managers\ConverterFactory.cs" />
+    <Compile Include="Managers\FileReader.cs" />
+    <Compile Include="Managers\FileReaderFactory.cs" />
+    <Compile Include="Managers\LilypondConverter.cs" />
+    <Compile Include="Managers\LilypondReader.cs" />
+    <Compile Include="Managers\MidiConverter.cs" />
+    <Compile Include="Managers\MidiReader.cs" />
     <Compile Include="Managers\MidiToLilyHelper.cs" />
     <Compile Include="Managers\MusicLoader.cs" />
+    <Compile Include="Managers\WPFConverter.cs" />
     <Compile Include="Models\LilypondToken.cs" />
     <Compile Include="Models\LilypondTokenKind.cs" />
     <Compile Include="Models\MyBar.cs" />
