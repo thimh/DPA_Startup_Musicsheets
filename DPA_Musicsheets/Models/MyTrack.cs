@@ -10,6 +10,6 @@ namespace DPA_Musicsheets.Models
     {
         private List<MyBar> bars;
         private int tempo;
-        private TimeSignature time;
+        private MyTimeSignature time;
     }
 }

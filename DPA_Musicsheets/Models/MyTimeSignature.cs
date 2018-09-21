@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DPA_Musicsheets.Models
 {
-    class TimeSignature
+    class MyTimeSignature
     {
         private int noteCount;
         private int secondsCount;
