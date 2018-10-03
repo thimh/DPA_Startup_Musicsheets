@@ -76,7 +76,7 @@ namespace DPA_Musicsheets.ViewModels
                 _lastChange = DateTime.Now;
 
                 _mainViewModel.CurrentState = "Rendering...";
-
+                _mainViewModel.CurrentSaveState.NextState(_mainViewModel);
                 Task.Delay(MILLISECONDS_BEFORE_CHANGE_HANDLED).ContinueWith((task) =>
                 {
                     if ((DateTime.Now - _lastChange).TotalMilliseconds >= MILLISECONDS_BEFORE_CHANGE_HANDLED)

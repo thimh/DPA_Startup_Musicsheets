@@ -123,7 +123,11 @@
     <Compile Include="Models\MyTimeSignature.cs" />
     <Compile Include="Models\MyTone.cs" />
     <Compile Include="Models\MyTrack.cs" />
+    <Compile Include="States\NotSavedState.cs" />
+    <Compile Include="States\SaveContext.cs" />
+    <Compile Include="States\SavedState.cs" />
     <Compile Include="ViewModels\MidiPlayerViewModel.cs" />
+    <Compile Include="States\SaveState.cs" />
     <Compile Include="ViewModels\StaffsViewModel.cs" />
     <Compile Include="Views\MidiPlayerCtrl.xaml.cs">
       <DependentUpon>MidiPlayerCtrl.xaml</DependentUpon>
