@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace DPA_Musicsheets.Managers
 {
-    class MidiReader
+    class MidiReader : FileReader
     {
+        public override void ReadFile(string fileName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

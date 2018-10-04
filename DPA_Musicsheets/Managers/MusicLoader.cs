@@ -27,6 +27,8 @@ namespace DPA_Musicsheets.Managers
         public List<MusicalSymbol> WPFStaffs { get; set; } = new List<MusicalSymbol>();
         private static List<Char> notesorder = new List<Char> { 'c', 'd', 'e', 'f', 'g', 'a', 'b' };
 
+        private FileReaderFactory fileReaderFactory = new FileReaderFactory();
+
         public Sequence MidiSequence { get; set; }
         #endregion Properties
 
@@ -48,6 +50,12 @@ namespace DPA_Musicsheets.Managers
         /// <param name="fileName"></param>
         public void OpenFile(string fileName)
         {
+            // TODO: CONTINUE WORKING ONT THIS!!!
+            fileReaderFactory.AddReaderType("LilypondReader", typeof(LilypondReader));
+            fileReaderFactory.AddReaderType("MidiReader", typeof(MidiReader));
+
+            fileReaderFactory.CreateReader("LilypondReader").ReadFile(fileName);
+
             CheckFileExtension(fileName);
 
             LoadLilypondIntoWpfStaffsAndMidi(LilypondText);
@@ -445,8 +453,9 @@ namespace DPA_Musicsheets.Managers
                     Value = s
                 };
 
-                token = CheckTokenKind(s, token);
-                token = CheckTokenKindIsNote(s, token);
+                //token = CheckTokenKind(s, token);
+                //token = CheckTokenKindIsNote(s, token);
+                token.TokenKind = new LilypondTokenFactory(s).getTokenKind();
 
                 if (tokens.Last != null)
                 {
@@ -460,38 +469,25 @@ namespace DPA_Musicsheets.Managers
             return tokens;
         }
 
-        private static LilypondToken CheckTokenKindIsNote(string s, LilypondToken token)
-        {
-            if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"[~]?[a-g][,'eis]*[0-9]+[.]*").IsMatch(s))
-            {
-                token.TokenKind = LilypondTokenKind.Note;
-            }
-            else if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"r.*?[0-9][.]*").IsMatch(s))
-            {
-                token.TokenKind = LilypondTokenKind.Rest;
-            }
+        //private static LilypondToken CheckTokenKindIsNote(string s, LilypondToken token)
+        //{
+        //    if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"[~]?[a-g][,'eis]*[0-9]+[.]*").IsMatch(s))
+        //    {
+        //        token.TokenKind = LilypondTokenKind.Note;
+        //    }
+        //    else if (token.TokenKind == LilypondTokenKind.Unknown && new Regex(@"r.*?[0-9][.]*").IsMatch(s))
+        //    {
+        //        token.TokenKind = LilypondTokenKind.Rest;
+        //    }
 
-            return token;
-        }
+        //    return token;
+        //}
 
-        private static LilypondToken CheckTokenKind(string s, LilypondToken token)
-        {
-            //TODO: Factory Pattern!!!???
-            switch (s)
-            {
-                case "\\relative": token.TokenKind = LilypondTokenKind.Staff; break;
-                case "\\clef": token.TokenKind = LilypondTokenKind.Clef; break;
-                case "\\time": token.TokenKind = LilypondTokenKind.Time; break;
-                case "\\tempo": token.TokenKind = LilypondTokenKind.Tempo; break;
-                case "\\repeat": token.TokenKind = LilypondTokenKind.Repeat; break;
-                case "\\alternative": token.TokenKind = LilypondTokenKind.Alternative; break;
-                case "{": token.TokenKind = LilypondTokenKind.SectionStart; break;
-                case "}": token.TokenKind = LilypondTokenKind.SectionEnd; break;
-                case "|": token.TokenKind = LilypondTokenKind.Bar; break;
-                default: token.TokenKind = LilypondTokenKind.Unknown; break;
-            }
-            return token;
-        }
+        //private static LilypondToken CheckTokenKind(string s, LilypondToken token)
+        //{
+        //    token.TokenKind = new LilypondTokenFactory(s).getTokenKind();
+        //    return token;
+        //}
         #endregion Staffs loading (loads lilypond to WPF staffs)
 
         #region Saving to files

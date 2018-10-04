@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace DPA_Musicsheets.Managers
 {
-    class LilypondReader
+    class LilypondReader : FileReader
     {
+        public override void ReadFile(string fileName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

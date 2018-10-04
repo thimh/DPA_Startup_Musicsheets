@@ -109,6 +109,7 @@
     <Compile Include="Managers\FileReaderFactory.cs" />
     <Compile Include="Managers\LilypondConverter.cs" />
     <Compile Include="Managers\LilypondReader.cs" />
+    <Compile Include="Managers\LilypondTokenFactory.cs" />
     <Compile Include="Managers\MidiConverter.cs" />
     <Compile Include="Managers\MidiReader.cs" />
     <Compile Include="Managers\MidiToLilyHelper.cs" />
